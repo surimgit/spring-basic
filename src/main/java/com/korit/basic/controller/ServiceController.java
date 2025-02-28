@@ -9,8 +9,7 @@ import com.korit.basic.service.BasicService;
 
 import lombok.RequiredArgsConstructor;
 
-
-@RestController
+ @RestController
 @RequestMapping("/service")
 // 생성자를 이용한 의존성 주입 방법은 @Autowired를 생략할 수 있기 때문에
 // Lombok으로 생성자를 자동 생성하여 응용할 수 있음.
