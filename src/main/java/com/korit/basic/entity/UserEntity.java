@@ -21,7 +21,6 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class UserEntity {
-
   @Id
   private String userId;
   private String userPassword;
@@ -29,7 +28,7 @@ public class UserEntity {
   private String userAddress;
   private String userTelNumber;
 
-  public UserEntity(PostUserRequestDto dto){
+  public UserEntity(PostUserRequestDto dto) {
     this.userId = dto.getUserId();
     this.userPassword = dto.getUserPassword();
     this.userName = dto.getUserName();
