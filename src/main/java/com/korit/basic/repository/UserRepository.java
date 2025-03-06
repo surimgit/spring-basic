@@ -20,9 +20,10 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
   // SELECT * FROM user WHERE user_tel_number = ?;
   UserEntity findByUserTelNumber(String userTelNumber);
 
+  List<UserEntity> findByOrderByUserIdAsc();
+
   boolean existsByUserId(String userId);
   boolean existsByUserTelNumber(String userTelNumber);
-
   // Query Method: 
   // - JpaRepository의 메소드 선언시에 지정된 규칙에 따라 메소드명을 작성하면
   //   Jpa가 SQL를 만들어주는 방법

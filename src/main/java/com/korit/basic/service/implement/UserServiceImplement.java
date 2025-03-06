@@ -7,7 +7,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import com.korit.basic.dto.GetUserListResponseDto;
 import com.korit.basic.dto.GetUserResponseDto;
+import com.korit.basic.dto.PatchUserRequestDto;
 import com.korit.basic.dto.PostUserRequestDto;
 import com.korit.basic.dto.ResponseDto;
 import com.korit.basic.entity.UserEntity;
@@ -21,7 +23,7 @@ import lombok.RequiredArgsConstructor;
 public class UserServiceImplement implements UserService {
 
   private final UserRepository userRepository;
-
+  
   public void queryMethod(){
     // sava(entity): 인스턴스를 레코드로 저장하는 메서드
     // 만약 엔터티에 ID에 해당하는 데이터가 동일한 데이터가 테이블에 존재한다면 수정
@@ -80,7 +82,7 @@ public class UserServiceImplement implements UserService {
       //   .userTelNumber(userTelNumber)
       //   .build();
   
-      UserEntity userEntity = new UserEntity(); 
+      UserEntity userEntity = new UserEntity(dto); 
       userRepository.save(userEntity);
   
     } catch (Exception exception) {
@@ -114,6 +116,35 @@ public class UserServiceImplement implements UserService {
       e.printStackTrace();
       return ResponseDto.databaseError();
     }
+    return ResponseDto.success(HttpStatus.OK);
+  }
+
+  @Override
+  public ResponseEntity<? super GetUserListResponseDto> getUserList() {
+    
+    List<UserEntity> userEntities = new ArrayList<>();
+    try {
+      userEntities = userRepository.findByOrderByUserIdAsc();
+    } catch (Exception e) {
+      e.printStackTrace();
+      return ResponseDto.databaseError();
+    }
+
+    return GetUserListResponseDto.success(userEntities);
+  }
+
+  @Override
+  public ResponseEntity<ResponseDto> patchUser(String userId, PatchUserRequestDto dto) {
+    try {
+      UserEntity userEntity = userRepository.findByUserId(userId);
+      if(userEntity == null) return ResponseDto.noExistUser();
+      userEntity.patch(dto);
+      userRepository.save(userEntity);
+    } catch (Exception e) {
+      e.printStackTrace();
+      return ResponseDto.databaseError();
+    }
+
     return ResponseDto.success(HttpStatus.OK);
   }
 }
