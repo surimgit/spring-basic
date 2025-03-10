@@ -25,47 +25,50 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
 // filter:
-// - 서버 로직(톰캣의 로직)과 서블릿(컨트롤러부터의 내용) 사이에서 Http Request에 대한
-//   사전 처리를 수행하는 영역
-// - filter에서 걸러진 Request는 서블릿까지 도달하지 못하고 reject됨
-// OncePoerRequestFilter 추상클래스를 확장 구현하여 filter클래스로 생성 가능
+// - 서버 로직(톰캣의 로직)과 서블릿(컨트롤러부터의 내용) 사이에서 Http Request에 대한 사전 처리를 수행하는 영역
+// - filter에서 걸러진 Request는 서블릿까지 도달하지 못하고 중간에서 reject됨
 
 @Component
 @RequiredArgsConstructor
-public class JwtAuthenticationFilter extends OncePerRequestFilter{
+// OncePerRequestFilter 추상클래스를 확장 구현하여 filter 클래스로 생성 가능
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
   private final JwtProvider jwtProvider;
   private final UserRepository userRepository;
 
   @Override
-  protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
-  FilterChain filterChain)
-      throws ServletException, IOException{
-
+  protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+      throws ServletException, IOException {
+    
     try {
+
       // 1. request 객체에서 token 가져오기
       String token = getToken(request);
-      if(token == null){
+      if (token == null) {
         filterChain.doFilter(request, response);
         return;
       }
 
       // 2. token 검증
       String subject = jwtProvider.validate(token);
-      if(subject == null){
+      if (subject == null) {
         filterChain.doFilter(request, response);
         return;
       }
 
-      // 3. 데이터베이스에 존재하는 유저인지 확인(선택 사항)
+      // 3. 데이터베이스에 존재하는 유저인지 확인 (선택 사항)
       UserEntity userEntity = userRepository.findByUserId(subject);
-      if(userEntity == null){
+      if (userEntity == null) {
         filterChain.doFilter(request, response);
         return;
       }
 
-      // 4. 접근 주체의 권한(리스트) 지정 (선택사항)
+      // 4. 접근주체의 권한 (리스트) 지정 (선택 사항)
       List<GrantedAuthority> roles = AuthorityUtils.NO_AUTHORITIES;
+
+      // 권한 규칙
+      // 1. 문자열
+      // 2. "ROLE_" 로 시작하는 문자열
       // String role = userEntity.getRole();
       // List<GrantedAuthority> roles = new ArrayList<>();
       // roles.add(new SimpleGrantedAuthority(role));
@@ -73,9 +76,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter{
       // 5. principle에 대한 정보를 context에 저장
 
       // 5-1. principle에 대한 정보를 인증된 사용자 객체로 생성
-      // UsernamePasswordAuthenticationToken(사용자정보, 비밀번호, 권한)
-      AbstractAuthenticationToken authenticationToken = 
-      new UsernamePasswordAuthenticationToken(subject, null, roles);
+      // UsernamePasswordAuthenticationToken(사용자정보, 비밀번호, 권한);
+      AbstractAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(subject, null, roles);
 
       // 5-2. 인증 정보에 request 등록
       authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
@@ -89,32 +91,36 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter{
       // 5-5. 생성한 security context를 등록
       SecurityContextHolder.setContext(securityContext);
 
-    } catch (Exception e) {
-      e.printStackTrace();
+    } catch(Exception exception) {
+      exception.printStackTrace();
     }
 
     // 6. 다음 필터에 request와 response 객체를 전달
     filterChain.doFilter(request, response);
 
   }
+  
+  // 1. request 객체 header에서 'Authorization' 필드의 값을 가져옴
+  // 2. Authorization 필드 값이 'Bearer '로 시작하는지 확인
+  // 3. Authorization 필드 값에서 토큰 추출
+  private String getToken(HttpServletRequest request) {
 
-  private String getToken(HttpServletRequest request){
-    // 1. request 객체 header에서 'Authrization'필드의 값을 가져옴
+    // 1. request 객체 header에서 'Authorization' 필드의 값을 가져옴
     String authorization = request.getHeader("Authorization");
-    // Authorizaiton 필드값이 존재하는지 확인
+
+    // - Authorization 필드값이 존재하는지 확인
     boolean hasAuthorization = StringUtils.hasText(authorization);
-    if(!hasAuthorization) return null;
-    
-    // 2. Authorization 필드 값이 'Bearer'로 시작하는지 확인
+    if (!hasAuthorization) return null;
+
+    // 2. Authorization 필드 값이 'Bearer '로 시작하는지 확인
     boolean isBearer = authorization.startsWith("Bearer ");
-    if(!isBearer) return null;
-    
-    // 3. Authorization 필드 값에서 토큰만 추출
-    // Bearer adaslkjdfskdjflskdf
+    if (!isBearer) return null;
+
+    // 3. Authorization 필드 값에서 토큰 추출
+    // Bearer asdjaskldjafkoshvjskvxhj
     String token = authorization.substring(7);
     return token;
-  }
-}
-  
-  
 
+  }
+
+}
