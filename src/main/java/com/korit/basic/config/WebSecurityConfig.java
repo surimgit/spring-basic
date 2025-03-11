@@ -20,6 +20,8 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.korit.basic.filter.JwtAuthenticationFilter;
+import com.korit.basic.handler.OAuth2SuccessHandler;
+import com.korit.basic.service.implement.OAuth2UserServiceImplement;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,6 +42,8 @@ import lombok.RequiredArgsConstructor;
 public class WebSecurityConfig {
 
   private final JwtAuthenticationFilter jwtAuthenticationFilter;
+  private final OAuth2UserServiceImplement oAuth2UserService;
+  private final OAuth2SuccessHandler oAuth2SuccessHandler;
   
   // Web Security 설정을 지정하는 메서드
   // @Bean:
@@ -81,16 +85,28 @@ public class WebSecurityConfig {
       // - 모든 클라이언트가 접근할 수 있도록 허용
       // - 인증된 모든 클라이언트가 접근할 수 있도록 허용
       // - 인증된 클라이언트 중 특정 권한을 가진 클라이언트만 접근할 수 있도록 허용
-      .authorizeHttpRequests(requset -> requset
+      .authorizeHttpRequests(request -> request
         // requestMachers(): URL 패턴, HTTP 메서드, URL 패턴 + HTTP 메서드 마다 접근 권한을 부여하는 메서드
         // permitAll(): 모든 클라이언트가 접근할 수 있도록 지정
         // authenticated(): 인증된 모든 클라이언트가 접근할 수 있도록 지정
         // hasRole(권한): 특정 권한을 가진 클라이언트만 접근할 수 있도록 지정 (매개변수로 전달하는 권한명은 ROLE_를 제거한 실제 권한명)
-        .requestMatchers("/basic", "/basic/**", "/security", "/security/**").permitAll()
+        .requestMatchers("/basic", "/basic/**", "/security", "/security/**", "/oauth2/**").permitAll()
         .requestMatchers(HttpMethod.PATCH).authenticated()
         .requestMatchers(HttpMethod.POST, "/user", "/user/**").hasRole("USER")
         // anyRequest(): 나머지 모든 요청에 대한 처리
         .anyRequest().authenticated()
+      )
+
+      // OAuth2 인증 처리
+      .oauth2Login(oauth2 -> oauth2
+        // 사용자가 oauth2 인증을 위한 요청 URL 지정
+        .authorizationEndpoint(endPoint -> endPoint.baseUri("/security/sns"))
+        // oauth2 인증 완료 후 인증서버에서 들어오는 URL 지정
+        .redirectionEndpoint(endPoint -> endPoint.baseUri("/oauth2/callback/*"))
+        // oauth2 인증 완료 후 사용자 정보를 처리할 서비스 지정
+        .userInfoEndpoint(endPoint -> endPoint.userService(oAuth2UserService))
+        // oauth2 서비스 처리 후 성공시 실행할 기능
+        .successHandler(oAuth2SuccessHandler)
       )
 
       // 인증 및 인가 과정에서 발생한 예외를 직접 처리
@@ -127,17 +143,18 @@ public class WebSecurityConfig {
 
 }
 
-// 인증 및 인가 실패 처리를 위한 커스텀 예외(AuthenticationEntryPoint 인터페이스 구현)
-class FailedAuthenticationEntryPoint implements AuthenticationEntryPoint{
+// 인증 및 인가 실패 처리를 위한 커스텀 예외 (AuthenticationEntryPoint 인터페이스 구현)
+class FailedAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
   @Override
   public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException)
       throws IOException, ServletException {
-
-      authException.printStackTrace();
-      response.setContentType("application/json;charset=UTF-8");
-      response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-      response.getWriter().write("{\"message\": \"인증 및 인가에 실패했습니다.\"}");
+    
+    authException.printStackTrace();
+    response.setContentType("application/json;charset=UTF-8");
+    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+    response.getWriter().write("{\"message\": \"인증 및 인가에 실패했습니다.\"}");
 
   }
+
 }
